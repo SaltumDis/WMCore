@@ -16,6 +16,9 @@ import hashlib
 import cherrypy
 from urllib2 import URLError
 
+from WMCore.ReqMgr.Tools.cms import site_white_list, site_black_list, lfn_bases, lfn_unmerged_bases, sites
+
+
 def tstamp():
     "Generic time stamp"
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
@@ -133,6 +136,144 @@ def json2table(jsondata, web_ui_map, visible_attrs=None):
         table += "<tr><td>%s</td><td>%s</td></tr>\n" % (kname, val)
     table += "</table>"
     return table
+
+def json2AssignTable(jsondata, web_ui_map, visible_attrs=None):
+    """
+    Convert input json dict into HTML table based on assumtion that
+    input json is in a simple key:value form.
+    """
+    table = """<table class="table-bordered width-100">\n"""
+    table += "<thead><tr><th>Field</th><th>Value</th></tr></thead>\n"
+    keys = sorted(jsondata.keys())
+    # move up keys whose values have REPLACE prefix
+    priority_keys = []
+    rest_keys = []
+    for key in keys:
+        val = jsondata[key]
+        if  isinstance(val, basestring) and val.startswith('REPLACE-'):
+            priority_keys.append(key)
+        else:
+            rest_keys.append(key)
+    cells = {}
+    dropdowns=['Team', 'MergedLFNBase', 'UnmergedLFNBase', 'TrustSitelists', 'TrustPUSitelists', 'SubscriptionPriority',
+             'CustodialSubType',
+             'NonCustodialSubType', 'Dashboard']
+    for key in priority_keys+rest_keys:
+        val = jsondata[key]
+        if key in ["SiteWhitelist" ,"SiteBlacklist", "CustodialSites", "NonCustodialSites"]:
+            cells[key] = createMultiChoiseDropdown(key,val)
+            continue
+        if key in dropdowns:
+            cells[key] = createDropdown(key, val)
+            continue
+        if  isinstance(val, list) and not val: # empty list replace with input text tag
+            val = ""
+        if  isinstance(val, list):
+            if  not visible_attrs:
+                sel = '<textarea name="%s" class="width-100">%s</textarea>' \
+                        % (key, json.dumps(val))
+            else:
+                sel = "<select name=\"%s\">" % key
+                values = sorted(val)
+                if  key in ['releases', 'software_releases', 'CMSSWVersion', 'ScramArch']:
+                    values.reverse()
+                for item in values:
+                    sel += "<option value=\"%s\">%s</option>" % (item, item)
+                sel += "</select>"
+            val = sel
+        elif isinstance(val, basestring):
+            if  val.startswith('REPLACE-'):
+                val = '<input type="text" name="%s" placeholder="%s" class="width-100">'\
+                        % (key, val)
+            elif  len(val) < 80:
+                val = '<input type="text" name="%s" value="%s" class="width-100" />' % (key, val)
+            else:
+                val = '<textarea name="%s" class="width-100">%s</textarea>' % (key, val)
+        else:
+            val = '<input type="text" name="%s" value="%s" class="width-100" />' % (key, val)
+        if  key in web_ui_map:
+            kname = web_ui_map[key]
+        else:
+            # use original key
+            kname = key
+        cells[key] = (kname, val)
+    if  visible_attrs and isinstance(visible_attrs, list):
+        for attr in visible_attrs:
+            key, val = cells.pop(attr)
+            if  key in web_ui_map:
+                kname = web_ui_map[key]
+            else:
+                # use original key
+                kname = key
+            val = val.replace('width-100', 'width-100 visible_input')
+            table += "<tr><td>%s</td><td class=\"visible\">%s</td></tr>\n" % (kname, val)
+    for key, pair in cells.items():
+        kname, val = pair
+        if  not visible_attrs:
+            val = val.replace('<input', '<input readonly')
+            val = val.replace('<textarea', '<textarea readonly')
+            val = val.replace('<select', '<select disabled')
+            val = val.replace('width-100', 'width-100 invisible_input')
+        table += "<tr><td>%s</td><td>%s</td></tr>\n" % (kname, val)
+    table += "</table>"
+    return table
+
+def createMultiChoiseDropdown(key, val):
+    values= None
+    if key == "SiteWhitelist":
+        values=site_white_list()
+    if key == "SiteBlacklist":
+        values = site_black_list()
+    if key == "CustodialSites":
+        values = ["CustodialSites1","CustodialSites2","CustodialSites3"]
+    if key == "NonCustodialSites":
+        values = ["NonCustodialSites1","NonCustodialSites2"]
+    sel = "<select id=\"multiDropdown\" multiple=\"multiple\" name=\"%s\">" % key
+    for item in values:
+        if item in val:
+            sel += "<option value=\"%s\" selected>%s</option>" % (item, item)
+        else:
+            sel += "<option value=\"%s\">%s</option>" % (item, item)
+    sel += "</select>"
+    val = sel
+    return key, val
+
+def createDropdown(key, val):
+    values= None
+    default=None
+    if key == "Team":
+        values=["Team1","Team2"]
+    if key == "MergedLFNBase":
+        values = lfn_bases()
+    if key == "UnmergedLFNBase":
+        values =lfn_unmerged_bases()
+        default="/store/unmerged"
+    if key == "TrustSitelists":
+        values = ["True","False"]
+        default="False"
+    if key == "TrustPUSitelists":
+        values = ["True","False"]
+        default="False"
+    if key == "SubscriptionPriority":
+        values = ['Low', 'Normal','High']
+    if key == "CustodialSubType":
+        values =['Replica','Move']
+    if key == "NonCustodialSubType":
+        values =['Replica','Move']
+    if key == "Dashboard":
+        values =['test', 'reprocessing', 'production', 'integration']
+    sel = "<select name=\"%s\">" % key
+    for item in values:
+        if item in val:
+            sel += "<option value=\"%s\" selected>%s</option>" % (item, item)
+        elif default == item:
+            sel += "<option value=\"%s\" selected>%s</option>" % (item, item)
+        else:
+            sel += "<option value=\"%s\">%s</option>" % (item, item)
+    sel += "</select>"
+    val = sel
+    return key, val
+
 
 def genid(kwds):
     "Generate id for given field"

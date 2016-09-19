@@ -24,7 +24,7 @@ from cherrypy import config as cherryconf
 
 # ReqMgrSrv modules
 from WMCore.ReqMgr.Web.tools import exposecss, exposejs, TemplatedPage
-from WMCore.ReqMgr.Web.utils import json2table, json2form, genid, checkargs, tstamp, sort
+from WMCore.ReqMgr.Web.utils import json2table, json2form, genid, checkargs, tstamp, sort, json2AssignTable
 from WMCore.ReqMgr.Utils.url_utils import getdata
 from WMCore.ReqMgr.Tools.cms import releases, architectures
 from WMCore.ReqMgr.Tools.cms import web_ui_names, sites
@@ -458,7 +458,7 @@ class ReqMgrService(TemplatedPage):
                     filteredDoc[prop] = doc.get(prop, "")
             content = self.templatepage('doc', title=title, status=status, name=name, rid=rid,
                                         tasks=json2form(tasks, indent=2, keep_first_value=False),
-                                        table=json2table(filteredDoc, web_ui_names(), visible_attrs),
+                                        table=json2AssignTable(filteredDoc, web_ui_names(), visible_attrs),
                                         jsondata=json2form(doc, indent=2, keep_first_value=False),
                                         doc=json.dumps(doc), time=time,
                                         transitions=transitions, ts=tst, user=user(), userdn=user_dn())

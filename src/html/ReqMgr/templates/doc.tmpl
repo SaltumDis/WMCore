@@ -120,12 +120,20 @@ function UpdateTaskParams() {
 }
 function ShowConfig() {
     var url="$base/config?name=$rid";
-    load(url);
+    window.open(url);
 }
 function loadSpec(tag) {
     var url="$base/create?form="+tag.value;
     load(url);
 }
+$("#multiDropdown").multiselect({
+        minWidth: 300,
+        height: 150,
+        header: false,
+        noneSelectedText: "Select",
+        selectedList: 3
+    });
+
 function activateSplitting() {
     ShowTag('splitting');
     var path = '$base/data/splitting/web_form/$name';

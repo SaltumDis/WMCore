@@ -233,6 +233,7 @@ function ToggleTag(tag, link_tag) {
         }
     }
 }
+
 function load(url) {
     window.location.href=url;
 }

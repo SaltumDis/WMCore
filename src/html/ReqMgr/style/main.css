@@ -53,7 +53,6 @@
     width: 200px;
 }
 
-// http://css-tricks.com/snippets/css/glowing-blue-input-highlights/
 input[type=text], textarea {
     -webkit-appearance: textarea;
     -webkit-transition: all 0.30s ease-in-out;
@@ -174,6 +173,10 @@ th { background: #B3B3B3; color: white; font-weight: bold; }
     border: solid 10px #408000;
     box-shadow: inset 5px 1px 20px 0px #ACBCD8;
     transition: box-shadow 0.3s;
+}
+
+table td > .visible{
+    box-shadow: None;
 }
 .visible_input {
     padding: 0.4em 0.25em;
